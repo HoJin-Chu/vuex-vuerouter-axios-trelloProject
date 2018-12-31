@@ -1,0 +1,86 @@
+npm install -g vue-cli  ->  전역으로 vue환경 구축
+vue init webpack-simple -> 스캐폴딩 만들기
+npm install -> 개발환경에 필요한 라이브러리 다운
+
+서버라우팅 : 화면갱신
+브라우저라우팅 : 화면에 필요한 부분만 갱신 -> Vue
+
+(1) App컴포넌트를 루트컴포넌트로 지정하기위해서 App을 불러와 render에 등록 -> App에 router-view를 설정
+    npm으로 다운받은 vue-router를 불러와 미들웨어로 설정 / 라우터를 등록한 컴포넌트들로 패스설정 /
+    - > 다른파일에서 사용가능하도록 export로 내보내기 -> main.js 에서 받아 뷰에 등록
+
+(2) App(루트컴포넌트) 에있는 router-link 를 Navbar컴포넌트를 만들어 여기에다가 쓰고 Navbar컴포넌트를
+    App컴포넌트에 불러서 등록하여 사용
+
+(3) Board 컴포넌트를 만들어 router에 index.js 에 컴포넌트로 등록
+    $route는 라우터를 정보객체 / 라우트할때 :id 로 동적으로 데이터값을 받을수있음
+
+(4) Board컴포넌트안에 Card컴포넌트를 넣기위해 route설정하는 곳에 children속성으로 패스를 설정한다
+    설정하게되면 Board컴포넌트에서 router-view를 등록 ( 백틱을 사용하면 템플릿함수와 같이 등록이 가능해서 간편 )
+    Board와 똑같이 $route의 params 값을 받아오는데 create로 하게되면 생성할때 고정이된다
+    그래서 라우트주소만 바뀌고 화면은 갱신이 안되는 현상이 일어난다
+    해결방법으로는 watch와같은 속성함수로 $route를 계속 감시하다가 $route가 바뀌면 그때 cid에 params 값을 갱신한다
+
+(5) 백엔드 Api를 받아올때 시간이 걸리기때문에 loading중이라는 표시를 하는것이 좋다
+    그래서 추후에 axios를 쓸건데 지금은 임시방편으로 setTimeOut으로 써보자
+    Board에서 로딩중을 출력하기위해서 v-if로 loading이 false 일때랑 true일때랑 구분 data에서 지정하여 먼저 false로 지정
+    methods를 만들어 fetchData속성함수를 설정한다 속성함수 내용은 처음에는 true이고 시간이 0.5초 지나면 false로 바꿈
+    이 속성함수를 시작할때 등록하기위해 created에 등록 /
+    Card에서는 로딩중을 출력하기위해서 동일하지만 watch속성함수 속성중에 객체로 받을때에는
+    핸들러와 immediate속성을 줄수있다 . 핸들러는 해당 fetchData와같은 메소드를 적용시키는것이고 immediate속성에 true는
+    cretaed 처럼 즉시 실행한다는 뜻이다.
+
+(6) API를 호출하려면 자바스크립트에서는 XMLHttpReqeust라는 객체를 이용해서 Http 호출
+    서버에서 JSON형식으로 데이터를 전달하면 그걸 jSON 형식으로 받아서 사용하면 됨
+
+(7) axios : XMLHttpReqeusts / 프로미스 API를 지원한다 / 요청과 응답사이에 Intercept가 가능하다 / 자동으로 jSON 파싱
+    npm install axios로 npm설정, import axios from 'axios'로 가져온다
+    똑같이 fetchData에서 처음에 loading을 true로 설정을 하고 axios로 URL에서 JSON데이터를 받는다.
+    then (success), catch (error), finally (always) 에서 then으로 받은값의 데이터를 넣고
+    에러에서 받은값의 response에 데이터를 넣고 마지막으로는 공통으로 해야되는 loading을 false 로 바꿔서 결과값을 나타낸다
+
+(8) 보드 url을 axios콜해서 받으면 데이터를 배열에다가 넣고 v-for로 모두 출력한다
+    에러가 나면 this.$router.replace('/login') 으로 $router 를 사용해 로그인으로 리다이렉트 시킨다.
+
+(9) axios는 랩핑해서 사용하는것이 좋다. 받을 url이 다양하고 많기 때문에. ( axios를 호출하는 모듈을 만들어라 )
+    api라는 폴더를 하나 만들어서 axios를 설정한다 / 오류가 났을경우 router로 push해서 리다이렉트해야하기때문에
+    router폴더에 있는 라우터도 설정한다 . 도메인은 한도메인에서 query값만 바뀌기때문에 const로 도메인을 설정하고
+    404에러가 났을경우 리다이렉트. request라는함수를 만들어 인자로 method,url,data 를 받는다
+    내부적으로는 axios를 실행한다 . axios는 객체형태로 전달한다
+    내보내기위해서 export로 request를 반환하는 메소드를 포함한 board객체를 넘긴다
+    넘기면 그값을 받아서 board에 fetch 함수를 실행해서 성공하면 this.boards의 배열에 담는다
+
+(10)  네비게이션가드로 토큰이 없으면 라우트를 안시킨다라는 조건을 건다 to from next 라는 인자를 받는다
+      beforEnter로 들어가기전에 localStorage에 token이 있으면 next()로 원할하게 라우팅을 하고
+      없으면 loginPath에 설정한 현재경로로 다시 이동한다
+
+(11)  url을 api 에서 axios로 가져온다. api에서 보낸 아이디와 비밀번호를 받아서 성공하게되면 토큰정보를 로컬스토리지에 저장
+      프로미스형태로 받기때문에 성공했을경우에는 data를 받아서 token이라는 이름으로 data객체안의 accessToken을 저장하고
+      실패할경우 에러 내용을 저장한다, 이경우 login url에서 헤더값에 token을 넘겨주기 위해서 리다이렉트되는 부분을 찾아가면
+      리다이렉트 부분에 token을 넘겨줘야 하기때문에 api index 파일에서 axios.defaults.headers.common['Authorization'] 로
+      token이 있으면 맞는 형식으로 토큰을 넘겨주고 없으면 null 값을 넘겨주도록한다, 이함수도 사용하기위해서
+      login.vue에서 import로 받아서 설정하여 token을 리다이렉트 하는부분에 넘겨주도록 한다
+
+(12)  로그아웃을 할경우에 토큰정보를 들고와 있으면 logout을 없으면 login을 보여주도록 한다
+      로그아웃버튼을 누를경우 토큰정보를 지우고 토큰헤더값도 null로 만들고나서 리다이렉트로 login페이지로 리다이렉트한다
+
+(13)  api결과로 boards 결과를 받은값을 v-for로 받아온다, 결과로 bgColor라는 값을 data-bgcolor라는 key에 할당을함
+      updated() 렌더링사이클로 created 다음에 호출되고 data값이 변동이 일어날때마다 호출되는데 내용은
+      레퍼런스중에 boardItem이라는 레퍼런스를 찾아온다, 그러한 boardItem의 element를 순회하면서 백그라운드를 세팅한다
+
+(14)  모달을 그대로 들고온다 그리고 AddBoard 컴포넌트를 만들어 모달을 적용한다 ( slot 으로 )
+      그후 Home컴포넌트에서 AddBoard를 가져와 설정, board를 추가하기위해서 api로 board url에서 title을 받는
+      메소드를 만들어서 home 컴포넌트로넘긴다, home컴포넌트에서는 title을 받아 성공을하면 목록을 다시 조회하는
+      fetchData 메소드 실행
+
+(15)  vuex를 사용하기위해 npm i vuex 로 다운/ store 폴더에 index.js 를 만들어 vuex를 추가
+      Vue.use(Vuex) 로 미들웨어를 설정하고 뷰엑스를 설정한뒤 export로 사용할수있도록 만들어준다
+      main.js 에서 store객체를 가져와서 등록한다
+
+
+홈페이지 접속 - 비인가 접속은 로그인페이지 이동
+로그인 페이지 접속 - 로그인 수행
+로그인하면 홈페이지 리다이렉트
+토큰정보를 가지고 보드목록 조회
+보드생성 - 생성한 보드화면 이동
+보드조회 - 자동 생성된 리스트 나열
